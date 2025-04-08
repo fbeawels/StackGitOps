@@ -1,4 +1,4 @@
-name: 🚀 Build & Push Docker image to Docker Hub
+name: 🚀 Build & Deploy Docker image
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,5 +25,21 @@ jobs:
     - name: 📤 Push Docker image
       run: docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
 
-    - name: 🔔 Appel du webhook via Ngrok
-      run: curl -X POST ${{ secrets.WEBHOOK_HOST }}
+    - name: 🔐 Config SSH pour déploiement
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+    - name: 🚀 Pull & relancer conteneur à distance
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          echo "Pull de la dernière image..."
+          docker pull mathieuawels/tpm-app:latest
+          echo "Stop et suppression du conteneur..."
+          docker stop tpm-app-container || true
+          docker rm tpm-app-container || true
+          echo "Lancement du nouveau conteneur..."
+          docker run -d --name tpm-app-container -p 8080:5000 mathieuawels/tpm-app:latest
+        EOF
