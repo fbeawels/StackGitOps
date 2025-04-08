@@ -25,6 +25,11 @@ jobs:
     - name: 📤 Push Docker image
       run: docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
 
+    - name: 🐞 Affichage de debug (GitHub masque les valeurs)
+      run: |
+        echo "SSH_HOST: ${{ secrets.SSH_HOST }}"
+        echo "SSH_USER: ${{ secrets.SSH_USER }}"
+
     - name: 🔐 Setup SSH
       run: |
         mkdir -p ~/.ssh
