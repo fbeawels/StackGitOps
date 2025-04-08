@@ -25,6 +25,5 @@ jobs:
     - name: 📤 Push Docker image
       run: docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
 
-    - name: 🔔 Appel du webhook local
-      run: |
-        curl -X POST http://${{ secrets.WEBHOOK_HOST }}:5001/webhook
+    - name: 🔔 Appel du webhook via Ngrok
+      run: curl -X POST ${{ secrets.WEBHOOK_HOST }}
