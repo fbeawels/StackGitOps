@@ -24,29 +24,3 @@ jobs:
 
     - name: 📤 Push Docker image
       run: docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
-
-    - name: 🌐 Test réseau vers la machine locale
-      run: ping -c 4 ${{ secrets.SSH_HOST }}
-
-    - name: 🔐 Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-        
-    - name: 🔗 Test SSH connection
-      run: ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connexion SSH réussie !"
-
-
-    - name: 🚀 Pull & relancer conteneur à distance
-      run: |
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          echo "Pull de la dernière image..."
-          docker pull mathieuawels/tpm-app:latest
-          echo "Stop et suppression du conteneur..."
-          docker stop tpm-app-container || true
-          docker rm tpm-app-container || true
-          echo "Lancement du nouveau conteneur..."
-          docker run -d --name tpm-app-container -p 8080:5000 mathieuawels/tpm-app:latest
-        EOF
