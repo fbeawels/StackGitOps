@@ -25,12 +25,13 @@ jobs:
     - name: 📤 Push Docker image
       run: docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
 
-    - name: 🔐 Config SSH pour déploiement
+    - name: 🔐 Setup SSH
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
 
     - name: 🚀 Pull & relancer conteneur à distance
       run: |
