@@ -1,80 +1,27 @@
-name: Build & Push Docker
+name: Publish Docker image
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  build-and-push:
-    runs-on: self-hosted
-
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-
+  docker-build-and-push:
+    runs-on: self-hosted  # ton runner Windows
     steps:
-      - name: 📥 Cloner le dépôt
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 1) [OPTION RECOMMANDÉE] Supprimer le 'credsStore' Docker Desktop avant le login
-      #    Sous Windows, Docker Desktop stocke par défaut les credentials
-      #    dans le Credential Manager Windows, ce qui peut bloquer Buildx.
-      #    Cette étape retire la clé 'credsStore' du fichier config.json.
-      - name: ✂️ Retirer le Docker Desktop credStore
-        shell: pwsh
-        run: |
-          $configPath = \"$Env:USERPROFILE\\.docker\\config.json\"
-          if (Test-Path $configPath) {
-            # Convertit le JSON en objet PowerShell
-            $json = Get-Content $configPath -Raw | ConvertFrom-Json
-            if ($json.credsStore) {
-              $json.PSObject.Properties.Remove('credsStore')
-            }
-            # Réécrit le fichier JSON
-            $json | ConvertTo-Json -Depth 10 | Set-Content $configPath
-          }
-
-      # 2) Login Docker Hub via docker/login-action
-      #    Stocke les identifiants (ou le token) dans config.json.
-      - name: 🔐 Connexion à Docker Hub
+      - name: Docker login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 3) Extraire les métadonnées (tags, labels) pour Docker.
-      #    Indique le namespace + repository cibles sur Docker Hub.
-      - name: 🏷️ Extraire les métadonnées Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app
-
-      # 4) Build & Push l’image vers Docker Hub
-      #    On fixe la version exact du build-push-action recommandée.
-      - name: 🐳 Build and push Docker image
-        id: push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+      - name: Build & Push Docker image
+        uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile  # si ton Dockerfile s'appelle autrement ou est placé ailleurs, adapte ce chemin
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      # 5) (Optionnel) Générer une attestation d’image (sécurité Supply Chain)
-      - name: 🛡️ Générer une attestation d’image
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-
-      # 6) Déploiement local (si tu souhaites tester l'image en local sur ton runner)
-      - name: 🚀 Déploiement local
-        shell: pwsh
-        run: |
-          docker stop tpm-app-container || $true
-          docker rm tpm-app-container || $true
-          docker run -d --name tpm-app-container -p 8080:5000 docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
