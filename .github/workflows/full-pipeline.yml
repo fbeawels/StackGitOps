@@ -25,8 +25,8 @@ jobs:
       shell: powershell
       run: |
         docker logout
-        $token = '${{ secrets.DOCKER_PASSWORD }}'
-        $user = '${{ secrets.DOCKER_USERNAME }}'
+        $token = ${{ secrets.DOCKER_PASSWORD }}
+        $user = ${{ secrets.DOCKER_USERNAME }}
         $token | docker login -u $user --password-stdin
 
 
