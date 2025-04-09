@@ -12,10 +12,15 @@ jobs:
     - name: 📥 Cloner le dépôt
       uses: actions/checkout@v3
 
-    - name: 🧼 Déconnexion Docker précédente
+    - name: 🧼 Déconnexion Docker précédente (PowerShell safe)
       shell: powershell
       run: |
-        docker logout || Write-Host "Déjà déconnecté"
+        try {
+          docker logout
+        } catch {
+          Write-Host "⚠️ Docker était déjà déconnecté ou erreur ignorée"
+        }
+
 
     - name: 🔐 Connexion à Docker Hub
       shell: powershell
