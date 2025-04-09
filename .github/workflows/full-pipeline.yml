@@ -10,9 +10,9 @@ jobs:
 
     steps:
     - name: 📥 Cloner le dépôt
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: 🧼 Déconnexion Docker précédente (PowerShell safe)
+    - name: 🧼 Déconnexion Docker précédente (sécurisée PowerShell)
       shell: powershell
       run: |
         try {
@@ -21,26 +21,25 @@ jobs:
           Write-Host "⚠️ Docker était déjà déconnecté ou erreur ignorée"
         }
 
-
-    - name: 🔐 Connexion à Docker Hub
+    - name: 🔐 Connexion sécurisée à Docker Hub
       shell: powershell
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        $pass = "${{ secrets.DOCKER_PASSWORD }}"
-        echo $pass | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        $env:DOCKER_PASSWORD | docker login -u "$env:DOCKER_USERNAME" --password-stdin
 
-    - name: 🧪 Test accès à node:16-alpine
+    - name: 🧪 Vérification accès à node:16-alpine
       run: docker pull node:16-alpine
 
     - name: 🐳 Build Docker image
-      run: docker build -t tpm-app .
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/tpm-app:latest .
 
     - name: 📤 Push image vers Docker Hub
-      run: |
-        docker tag tpm-app docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
-        docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
 
     - name: 🚀 Déploiement local
       run: |
         docker stop tpm-app-container || true
         docker rm tpm-app-container || true
-        docker run -d --name tpm-app-container -p 8080:5000 mathieuawels/tpm-app:latest
+        docker run -d --name tpm-app-container -p 8080:5000 ${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
