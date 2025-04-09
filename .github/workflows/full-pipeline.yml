@@ -1,31 +1,54 @@
-name: Build and Push Docker
-on: [push]
+name: 🐳 Build & Deploy via Local Runner
+
+on:
+  push:
+    branches: [main]
 
 jobs:
-  build-and-push:
-    runs-on: [self-hosted, Windows]  
+  build-and-deploy:
+    runs-on: self-hosted
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+    - name: 📥 Cloner le dépôt
+      uses: actions/checkout@v4
 
-      - name: Disable Docker Desktop credStore
-        if: ${{ runner.os == 'Windows' }}
-        run: |
-          $conf = "$Env:USERPROFILE\.docker\config.json"
-          if (Test-Path $conf) {
-            (Get-Content $conf) -notmatch '\"credsStore\"' | Set-Content $conf
-          }
-        shell: pwsh
+    - name: 🔐 Connexion à Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: 🏷️ Extraire les métadonnées Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app
 
-      - name: Build and Push image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: docker.io/mon-username/tpm-app:latest
+    - name: 🐳 Build & Push vers Docker Hub
+      id: push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: 🛡️ Générer une attestation d’image
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-name: docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app
+        subject-digest: ${{ steps.push.outputs.digest }}
+        push-to-registry: true
+
+    - name: 🚀 Déploiement local
+      run: |
+        docker stop tpm-app-container || true
+        docker rm tpm-app-container || true
+        docker run -d --name tpm-app-container -p 8080:5000 docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
