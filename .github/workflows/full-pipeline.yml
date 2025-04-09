@@ -23,11 +23,12 @@ jobs:
 
     - name: 🔐 Connexion sécurisée à Docker Hub
       shell: powershell
-      env:
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        $env:DOCKER_PASSWORD | docker login -u "$env:DOCKER_USERNAME" --password-stdin
+        docker logout
+        $pass = '${{ secrets.DOCKER_PASSWORD }}'
+        $user = '${{ secrets.DOCKER_USERNAME }}'
+        $pass | docker login -u $user --password-stdin
+
 
     - name: 🧪 Vérification accès à node:16-alpine
       run: docker pull node:16-alpine
