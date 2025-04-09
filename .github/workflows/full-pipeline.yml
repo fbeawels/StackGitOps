@@ -27,7 +27,8 @@ jobs:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+
         
 
     - name: 🧪 Vérification accès à node:16-alpine
