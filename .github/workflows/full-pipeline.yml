@@ -1,53 +1,41 @@
-name: 🚀 Build + Deploy via Self-Hosted Runner
+name: 🐳 Build & Deploy via Local Runner
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted  # 🧠 Important : on utilise TON runner local
+    runs-on: self-hosted
 
     steps:
     - name: 📥 Cloner le dépôt
       uses: actions/checkout@v3
 
-    - name: 🐳 Build de l'image Docker
-      run: docker build -t tpm-app .
-
-    - name: 🔍 Test injection des secrets (version Windows PowerShell)
+    - name: 🧼 Déconnexion Docker précédente
       shell: powershell
       run: |
-        Set-Content -Path username.txt -Value "${{ secrets.DOCKER_USERNAME }}"
-        Set-Content -Path password.txt -Value "${{ secrets.DOCKER_PASSWORD }}"
-        $usernameLength = (Get-Content username.txt).Length
-        $passwordLength = (Get-Content password.txt).Length
-        Write-Host "Username length: $usernameLength"
-        Write-Host "Password length: $passwordLength"
-    
+        docker logout || Write-Host "Déjà déconnecté"
 
-    - name: 🔐 Connexion Docker (version Windows)
+    - name: 🔐 Connexion à Docker Hub
       shell: powershell
       run: |
         $pass = "${{ secrets.DOCKER_PASSWORD }}"
         echo $pass | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+    - name: 🧪 Test accès à node:16-alpine
+      run: docker pull node:16-alpine
 
-    - name: 🏷️ Tag de l'image
-      run: docker tag tpm-app docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
+    - name: 🐳 Build Docker image
+      run: docker build -t tpm-app .
 
-    - name: 📤 Push de l'image
-      run: docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
-
-    - name: 🐳 Déploiement local (pull + run)
+    - name: 📤 Push image vers Docker Hub
       run: |
-        echo "🔄 Pull de l'image depuis Docker Hub"
-        docker pull mathieuawels/tpm-app:latest
+        docker tag tpm-app docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
+        docker push docker.io/${{ secrets.DOCKER_USERNAME }}/tpm-app:latest
 
-        echo "🛑 Suppression de l'ancien conteneur"
+    - name: 🚀 Déploiement local
+      run: |
         docker stop tpm-app-container || true
         docker rm tpm-app-container || true
-
-        echo "🚀 Lancement du conteneur"
         docker run -d --name tpm-app-container -p 8080:5000 mathieuawels/tpm-app:latest
