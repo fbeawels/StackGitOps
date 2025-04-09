@@ -27,7 +27,6 @@ jobs:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        docker logout || Write-Host "Already logged out"
         $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
         
 
